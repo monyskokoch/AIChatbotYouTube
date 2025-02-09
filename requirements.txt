@@ -1,0 +1,9 @@
+streamlit
+faiss-cpu
+numpy
+sentence-transformers
+openai
+google-api-python-client
+youtube-transcript-api
+tiktoken
+requests
