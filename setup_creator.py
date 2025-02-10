@@ -206,9 +206,9 @@ def generate_response(question, context):
         {{"role": "system", "content": system_prompt}},
         {{"role": "user", "content": f"""
         Based on these transcript segments:
-        {context}
+        {{context}}
         
-        Answer this question in {channel_info['name']}'s style: {question}"""}}
+        Answer this question in {channel_info['name']}'s style: {{question}}"""}}
     ]
     
     try:
