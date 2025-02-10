@@ -271,8 +271,8 @@ if prompt := st.chat_input():
             st.session_state.messages.append({{"role": "assistant", "content": response}})
 '''
         
-        with open(f"{deploy_dir}/streamlit_app.py", 'w') as f:
-            f.write(app_content.strip())
+        with open(f"{deploy_dir}/streamlit_app.py", 'w', encoding='utf-8') as f:
+            f.write(app_template.strip())
 
 def main():
     parser = argparse.ArgumentParser(description="Set up a creator's chatbot")
