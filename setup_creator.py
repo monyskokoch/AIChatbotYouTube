@@ -128,7 +128,7 @@ class CreatorSetup:
 
     def create_streamlit_app(self, deploy_dir, channel_info):
         """Create the Streamlit app file"""
-        app_template = f'''
+        app_content = f'''
 import streamlit as st
 import faiss
 import numpy as np
@@ -202,16 +202,16 @@ def generate_response(question, context):
     system_prompt = f"""You are an AI trained to respond exactly like {channel_info['name']}, based on their video transcripts. 
     Stay true to their style, knowledge, and way of explaining things. Use the provided transcript segments as your source of knowledge."""
     
-    messages = [
-        {{"role": "system", "content": system_prompt}},
-        {{"role": "user", "content": f"""
-        Based on these transcript segments:
-        {{context}}
-        
-        Answer this question in {channel_info['name']}'s style: {{question}}"""}}
-    ]
-    
     try:
+        messages = [
+            {{"role": "system", "content": system_prompt}},
+            {{"role": "user", "content": f"""
+            Based on these transcript segments:
+            {{context}}
+            
+            Answer this question in {channel_info['name']}'s style: {{question}}"""}}
+        ]
+        
         response = client.chat.completions.create(
             model="gpt-4",
             messages=messages,
@@ -219,8 +219,8 @@ def generate_response(question, context):
             max_tokens=500
         )
         return response.choices[0].message.content
-    except Exception as e:
-        return f"Sorry, I encountered an error: {str(e)}"
+    except Exception as error:
+        return f"Sorry, I encountered an error: {{str(error)}}"
 
 # Display creator header
 st.markdown(
@@ -241,8 +241,8 @@ st.markdown(
 # Load models
 try:
     faiss_index, transcript_texts, sentence_transformer = load_models()
-except Exception as e:
-    st.error(f"Error loading models: {str(e)}")
+except Exception as error:
+    st.error(f"Error loading models: {{str(error)}}")
     st.stop()
 
 # Display chat messages
@@ -272,7 +272,7 @@ if prompt := st.chat_input():
 '''
         
         with open(f"{deploy_dir}/streamlit_app.py", 'w') as f:
-            f.write(app_template.strip())
+            f.write(app_content.strip())
 
 def main():
     parser = argparse.ArgumentParser(description="Set up a creator's chatbot")
