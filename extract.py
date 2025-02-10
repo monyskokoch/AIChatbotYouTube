@@ -10,38 +10,11 @@ class TranscriptExtractor:
         self.api_key = api_key
         self.youtube = build("youtube", "v3", developerKey=api_key)
 
-    def extract_for_channel(self, channel_id, max_videos=50):
-        """Main function to extract transcripts for a channel"""
-        # Create creator directory
-        creator_dir = f"creators/{channel_id}"
-        os.makedirs(creator_dir, exist_ok=True)
-        
-        # Get video IDs
-        print(f"🔍 Fetching videos for channel: {channel_id}")
-        video_ids = self._get_video_ids(channel_id, max_videos)
-        
-        # Get transcripts
-        transcripts = {}
-        print("📝 Extracting transcripts... This may take a few minutes.")
-        
-        for video_id in tqdm(video_ids, desc="Processing videos"):
-            transcript = self._get_transcript(video_id)
-            if transcript:
-                transcripts[video_id] = transcript
-            time.sleep(0.2)  # Avoid API rate limits
-
-        # Save to CSV in creator's directory
-        df = pd.DataFrame(transcripts.items(), columns=["Video_ID", "Transcript"])
-        csv_path = f"{creator_dir}/transcripts.csv"
-        df.to_csv(csv_path, index=False)
-        
-        print(f"\n✅ Extracted {len(transcripts)} transcripts to {csv_path}")
-        return csv_path
-
-    def _get_video_ids(self, channel_id, max_videos):
-        """Get video IDs from a channel"""
+    def get_video_ids(self, channel_id, max_videos=50):
+        """Fetches video IDs from a YouTube channel with live progress updates."""
         video_ids = []
         next_page_token = None
+        print(f"🔍 Fetching videos for channel: {channel_id}")
         
         while len(video_ids) < max_videos:
             request = self.youtube.search().list(
@@ -67,7 +40,7 @@ class TranscriptExtractor:
         
         return video_ids
 
-    def _get_transcript(self, video_id):
+    def get_transcript(self, video_id):
         """Get transcript for a single video"""
         try:
             transcript = YouTubeTranscriptApi.get_transcript(video_id)
@@ -75,9 +48,38 @@ class TranscriptExtractor:
         except:
             return None
 
-# Only run this if script is run directly
+    def extract_for_channel(self, channel_id, output_dir=None, max_videos=50):
+        """Extract transcripts for a channel"""
+        # Get video IDs
+        video_ids = self.get_video_ids(channel_id, max_videos)
+        
+        # Extract transcripts
+        print("📝 Extracting transcripts... This may take a few minutes.")
+        transcripts = {}
+        
+        for video_id in tqdm(video_ids, desc="Processing videos"):
+            transcript = self.get_transcript(video_id)
+            if transcript:
+                transcripts[video_id] = transcript
+            time.sleep(0.2)  # Avoid API rate limits
+        
+        # Create output directory if specified
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            csv_path = os.path.join(output_dir, "transcripts.csv")
+        else:
+            csv_path = "transcripts.csv"
+        
+        # Save to CSV
+        df = pd.DataFrame(transcripts.items(), columns=["Video_ID", "Transcript"])
+        df.to_csv(csv_path, index=False)
+        
+        print(f"\n✅ Extracted {len(transcripts)} transcripts to {csv_path}")
+        return csv_path
+
 if __name__ == "__main__":
-    API_KEY = os.getenv('YOUTUBE_API_KEY')  # Replace with your API key
+    # For testing
+    API_KEY = os.getenv('YOUTUBE_API_KEY')
     channel_id = input("Enter YouTube channel ID: ")
     
     extractor = TranscriptExtractor(API_KEY)
