@@ -137,20 +137,16 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 import time
-
 # Load environment variables
 load_dotenv()
-
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
 # Page config
 st.set_page_config(
     page_title="Chat with {channel_info['name']}",
     page_icon="🤖",
     layout="centered"
 )
-
 # Custom CSS
 st.markdown("""
 <style>
@@ -168,13 +164,11 @@ st.markdown("""
     }}
 </style>
 """, unsafe_allow_html=True)
-
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {{"role": "assistant", "content": f"Hi! I'm {channel_info['name']}'s AI assistant. Ask me anything about their content!"}}
     ]
-
 @st.cache_resource
 def load_models():
     """Load FAISS index and models"""
@@ -182,7 +176,6 @@ def load_models():
     transcript_texts = np.load("texts.npy", allow_pickle=True)
     sentence_transformer = SentenceTransformer("all-MiniLM-L6-v2")
     return faiss_index, transcript_texts, sentence_transformer
-
 def search_similar_transcripts(query, faiss_index, transcript_texts, sentence_transformer):
     """Search for relevant transcript segments"""
     query_vector = sentence_transformer.encode([query])[0]
@@ -196,7 +189,6 @@ def search_similar_transcripts(query, faiss_index, transcript_texts, sentence_tr
         similar_texts.append(transcript_texts[idx])
     
     return similar_texts
-
 def generate_response(question, context):
     """Generate response using OpenAI API"""
     system_prompt = f"""You are an AI trained to respond exactly like {channel_info['name']}, based on their video transcripts. 
@@ -221,7 +213,6 @@ def generate_response(question, context):
         return response.choices[0].message.content
     except Exception as error:
         return f"Sorry, I encountered an error: {{str(error)}}"
-
 # Display creator header
 st.markdown(
     f"""
@@ -237,25 +228,21 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
 # Load models
 try:
     faiss_index, transcript_texts, sentence_transformer = load_models()
 except Exception as error:
     st.error(f"Error loading models: {{str(error)}}")
     st.stop()
-
 # Display chat messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
-
 # Chat input
 if prompt := st.chat_input():
     st.session_state.messages.append({{"role": "user", "content": prompt}})
     with st.chat_message("user"):
         st.write(prompt)
-
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             similar_texts = search_similar_transcripts(
@@ -272,7 +259,7 @@ if prompt := st.chat_input():
 '''
         
         with open(f"{deploy_dir}/streamlit_app.py", 'w', encoding='utf-8') as f:
-            f.write(app_template.strip())
+            f.write(app_content.strip())
 
 def main():
     parser = argparse.ArgumentParser(description="Set up a creator's chatbot")
