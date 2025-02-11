@@ -156,80 +156,68 @@ def generate_suggested_questions(transcript_texts: List[str], n: int = 5) -> Lis
             "What inspired you?"
         ]
 
-# Search function with smart context handling
 def search_similar_transcripts(query, faiss_index, transcript_texts, sentence_transformer):
+    """Search for relevant transcript segments with token limiting"""
     query_vector = sentence_transformer.encode([query])[0]
     query_vector = np.array([query_vector]).astype('float32')
     
-    k = 8
+    k = 3  # Reduced from 5 to limit context
     distances, indices = faiss_index.search(query_vector, k)
     
-    seen_texts = set()
     similar_texts = []
+    total_length = 0
+    max_chars = 3000  # Approximate token limit based on characters
     
     for idx in indices[0]:
         text = transcript_texts[idx]
-        if text not in seen_texts and len(text.split()) >= 20:
-            seen_texts.add(text)
+        if total_length + len(text) <= max_chars:
             similar_texts.append(text)
+            total_length += len(text)
+        else:
+            break
     
-    total_tokens = 0
-    final_texts = []
-    
-    for text in similar_texts:
-        chunks = smart_chunk_text(text)
-        for chunk in chunks:
-            chunk_tokens = count_tokens(chunk)
-            if total_tokens + chunk_tokens <= 6000:
-                final_texts.append(chunk)
-                total_tokens += chunk_tokens
-            else:
-                break
-                
-    return final_texts
+    return similar_texts
 
-# Generate response with rate limit handling
 def generate_response(question, context):
-    system_prompt = f"""You are an AI trained to respond exactly like {creator_info['name']}, based on their video transcripts. 
-    Important aspects of your responses:
-    1. Use their exact speaking style and tone
-    2. Reference examples from their content when relevant
-    3. Stay true to their demonstrated knowledge and expertise
-    4. Use their typical phrases and expressions
-    5. Maintain their level of detail and explanation style
+    """Generate response with rate limit handling"""
+    system_prompt = f"""You are an AI trained to respond exactly like {channel_info['name']}, based on their video transcripts. 
+    Stay true to their style, knowledge, and way of explaining things. Use the provided transcript segments as your source of knowledge.
+    Be extremely specific and personal in your responses, as if {channel_info['name']} is directly speaking to their audience."""
     
-    Remember: You're not just providing information, you're providing it exactly as {creator_info['name']} would."""
-    
-    combined_context = "\n---\n".join(context)
-    
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"""
-        Based on these transcript segments:
-        {combined_context}
+    try:
+        # Join context with length limit
+        combined_context = " ".join(context)
+        if len(combined_context) > 3000:
+            combined_context = combined_context[:3000] + "..."
         
-        Answer this question in {creator_info['name']}'s style: {question}"""}
-    ]
-    
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=messages,
-                temperature=0.7,
-                max_tokens=500,
-                presence_penalty=0.6
-            )
-            return response.choices[0].message.content
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"""
+            Based on these transcript segments:
+            {combined_context}
             
-        except Exception as e:
-            if "rate_limit" in str(e).lower():
-                if attempt < max_retries - 1:
-                    time.sleep(20)
+            Answer this question in {channel_info['name']}'s style: {question}"""}
+        ]
+        
+        # Add retry logic for rate limits
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=500
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                if "rate_limit" in str(e).lower() and attempt < max_retries - 1:
+                    time.sleep(20)  # Wait before retrying
                     continue
-            st.error(f"Error: {str(e)}")
-            return "I'm having trouble connecting right now. Please try again in a moment."
+                raise
+                
+    except Exception as error:
+        return f"Sorry, I encountered an error: {str(error)}"
 
 # Handle suggested question click
 def handle_question_click(question):
