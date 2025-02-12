@@ -179,45 +179,86 @@ def search_similar_transcripts(query, faiss_index, transcript_texts, sentence_tr
     return similar_texts
 
 def generate_response(question, context):
-    """Generate response with rate limit handling"""
-    system_prompt = f"""You are an AI trained to respond exactly like {channel_info['name']}, based on their video transcripts. 
+    """Generate response with comprehensive error handling and fallback mechanisms"""
+    system_prompt = f"""You are an AI trained to respond exactly like {creator_info['name']}, based on their video transcripts. 
     Stay true to their style, knowledge, and way of explaining things. Use the provided transcript segments as your source of knowledge.
-    Be extremely specific and personal in your responses, as if {channel_info['name']} is directly speaking to their audience."""
+    Be extremely specific and personal in your responses, as if {creator_info['name']} is directly speaking to their audience."""
+    
+    # Fallback response function
+    def get_fallback_response():
+        return f"I apologize, but I'm having trouble processing this specific query about {creator_info['name']}'s content. Could you rephrase your question or try a different approach?"
     
     try:
-        # Join context with length limit
-        combined_context = " ".join(context)
-        if len(combined_context) > 3000:
-            combined_context = combined_context[:3000] + "..."
+        # Intelligent context management
+        def prepare_context(context, max_tokens=3000):
+            # Convert context to string and truncate
+            combined_context = " ".join(context)
+            
+            # Use tiktoken to accurately count tokens
+            encoding = tiktoken.get_encoding("cl100k_base")
+            tokens = encoding.encode(combined_context)
+            
+            # Truncate if over token limit
+            if len(tokens) > max_tokens:
+                truncated_tokens = tokens[:max_tokens]
+                combined_context = encoding.decode(truncated_tokens)
+            
+            return combined_context
         
+        # Prepare context
+        truncated_context = prepare_context(context)
+        
+        # Prepare messages with intelligent token management
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"""
             Based on these transcript segments:
-            {combined_context}
+            {truncated_context}
             
-            Answer this question in {channel_info['name']}'s style: {question}"""}
+            Answer this question in {creator_info['name']}'s style: {question}"""}
         ]
         
-        # Add retry logic for rate limits
-        max_retries = 3
-        for attempt in range(max_retries):
+        # Retry mechanism with multiple models and strategies
+        models_to_try = [
+            {"model": "gpt-4", "max_tokens": 500, "temperature": 0.7},
+            {"model": "gpt-3.5-turbo", "max_tokens": 300, "temperature": 0.7},
+        ]
+        
+        for model_config in models_to_try:
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model=model_config['model'],
                     messages=messages,
-                    temperature=0.7,
-                    max_tokens=500
+                    temperature=model_config['temperature'],
+                    max_tokens=model_config['max_tokens']
                 )
                 return response.choices[0].message.content
-            except Exception as e:
-                if "rate_limit" in str(e).lower() and attempt < max_retries - 1:
-                    time.sleep(20)  # Wait before retrying
+            
+            except Exception as model_error:
+                # Log the specific model error
+                print(f"Error with {model_config['model']}: {str(model_error)}")
+                
+                # If it's a token limit error, reduce context further
+                if "context_length_exceeded" in str(model_error):
+                    messages[1]['content'] = f"""
+                    Summarized transcript segments:
+                    {truncated_context[:1000]}
+                    
+                    Concisely answer this question in {creator_info['name']}'s style: {question}"""
                     continue
-                raise
+                
+                # If it's a rate limit error, wait and retry
+                if "rate_limit" in str(model_error).lower():
+                    time.sleep(30)
+                    continue
+        
+        # If all model attempts fail, return fallback
+        return get_fallback_response()
                 
     except Exception as error:
-        return f"Sorry, I encountered an error: {str(error)}"
+        # Comprehensive error logging
+        print(f"Unexpected error in generate_response: {str(error)}")
+        return get_fallback_response()
 
 # Handle suggested question click
 def handle_question_click(question):
