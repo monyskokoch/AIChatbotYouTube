@@ -27,43 +27,168 @@ st.set_page_config(
 )
 
 # Custom CSS
-st.markdown("""
-<style>
-    .creator-header {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        padding: 20px;
-        background: #f8f9fa;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
-    .creator-info {
-        flex: 1;
-    }
-    .creator-stats {
-        font-size: 0.9em;
-        color: #666;
-    }
-    .suggested-questions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin: 20px 0;
-    }
-    .question-chip {
-        background: #f0f2f6;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-size: 0.9em;
-        cursor: pointer;
-        transition: background 0.3s;
-    }
-    .question-chip:hover {
-        background: #e0e2e6;
-    }
-</style>
-""", unsafe_allow_html=True)
+def apply_custom_css():
+    st.markdown("""
+        <style>
+        /* Modern Color Scheme */
+        :root {
+            --primary-color: #2D2D2D;
+            --secondary-color: #F8F9FA;
+            --accent-color: #FF4B4B;
+            --text-color: #333333;
+            --light-gray: #E9ECEF;
+        }
+        
+        /* Main Container */
+        .main {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Creator Header */
+        .creator-header {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #FFFFFF 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            transition: transform 0.2s ease;
+        }
+        
+        .creator-header:hover {
+            transform: translateY(-2px);
+        }
+        
+        .creator-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 60px;
+            object-fit: cover;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .creator-info {
+            flex: 1;
+        }
+        
+        .creator-name {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--primary-color);
+        }
+        
+        .creator-stats {
+            color: #666;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Suggested Questions */
+        .suggested-questions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 2rem 0;
+        }
+
+        .question-chip {
+            background: var(--light-gray);
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: var(--text-color);
+        }
+
+        .question-chip:hover {
+            background: var(--accent-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        /* Chat Messages */
+        .chat-message {
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease;
+            max-width: 85%;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        [data-testid="stChatMessage"] {
+            background: var(--light-gray);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* User messages */
+        [data-testid="stChatMessage"][data-chat-message-user-name="user"] {
+            background: var(--accent-color);
+            color: white;
+            margin-left: 15%;
+        }
+        
+        /* Assistant messages */
+        [data-testid="stChatMessage"][data-chat-message-user-name="assistant"] {
+            background: var(--secondary-color);
+            margin-right: 15%;
+        }
+        
+        /* Input Area */
+        [data-testid="stChatInput"] {
+            border-radius: 25px !important;
+            border: 2px solid var(--light-gray) !important;
+            padding: 0.8rem 1.5rem !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        [data-testid="stChatInput"]:focus-within {
+            border-color: var(--accent-color) !important;
+            box-shadow: 0 0 0 2px rgba(255, 75, 75, 0.1) !important;
+        }
+        
+        /* Spinner */
+        .stSpinner {
+            border-color: var(--accent-color) !important;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .creator-header {
+                flex-direction: column;
+                text-align: center;
+                padding: 1.5rem;
+            }
+            
+            .creator-avatar {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .chat-message {
+                margin-left: 1rem;
+                margin-right: 1rem;
+                max-width: 90%;
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
 # Initialize session state
 if "messages" not in st.session_state:
@@ -284,14 +409,17 @@ def handle_question_click(question):
 
 # Main chat interface
 def main():
-    # Creator header
+    # Apply custom CSS
+    apply_custom_css()
+    
+    # Rest of your main function stays the same
     st.markdown(
         f"""
         <div class="creator-header">
-            <img src="assets/profile.jpg" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;">
+            <img src="assets/profile.jpg" class="creator-avatar">
             <div class="creator-info">
-                <h2 style="margin: 0;">{creator_info['name']}</h2>
-                <p style="margin: 5px 0;">{creator_info['description'][:150]}...</p>
+                <h1 class="creator-name">{creator_info['name']}</h1>
+                <p class="creator-description">{creator_info['description'][:150]}...</p>
                 <div class="creator-stats">
                     {int(creator_info['subscriber_count']):,} subscribers • {int(creator_info['video_count']):,} videos
                 </div>
